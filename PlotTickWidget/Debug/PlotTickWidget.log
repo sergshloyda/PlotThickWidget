@@ -1,0 +1,121 @@
+﻿Build started 13.12.2022 16:36:53.
+     1>Project "D:\BSV\Test\PlotTickWidget\PlotTickWidget\PlotTickWidget.vcxproj" on node 2 (build target(s)).
+     1>InitializeBuildStatus:
+         Creating "Debug\PlotTickWidget.unsuccessfulbuild" because "AlwaysCreate" was specified.
+       CustomBuild:
+         All outputs are up-to-date.
+       ClCompile:
+         D:\Program Files (x86)\Microsoft Visual Studio 10.0\VC\bin\CL.exe /c /I.\GeneratedFiles /I. /ID:\Qt\Qt5.3.2\5.3\msvc2010_opengl\include /I.\GeneratedFiles\Debug /ID:\Qt\Qt5.3.2\5.3\msvc2010_opengl\include\QtCore /ID:\Qt\Qt5.3.2\5.3\msvc2010_opengl\include\QtGui /ID:\Qt\Qt5.3.2\5.3\msvc2010_opengl\include\QtWidgets /ID:\Qt\Qt5.3.2\5.3\msvc2010_opengl\include\QtNetwork /I"D:\Program Files (x86)\Visual Leak Detector\include" /Zi /nologo /W1 /WX- /Od /Oy- /D UNICODE /D WIN32 /D WIN64 /D QT_DLL /D QT_CORE_LIB /D QT_GUI_LIB /D QT_WIDGETS_LIB /D QT_NETWORK_LIB /Gm- /EHsc /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Fo"Debug\\" /Fd"Debug\vc100.pdb" /Gd /TP /analyze- /errorReport:prompt plottickwidget.cpp
+         plottickwidget.cpp
+         All outputs are up-to-date.
+       Link:
+         D:\Program Files (x86)\Microsoft Visual Studio 10.0\VC\bin\link.exe /ERRORREPORT:PROMPT /OUT:"D:\BSV\Test\PlotTickWidget\Win32\Debug\\PlotTickWidget.exe" /NOLOGO /LIBPATH:D:\Qt\Qt5.3.2\5.3\msvc2010_opengl\lib /LIBPATH:"D:\Program Files (x86)\Visual Leak Detector\lib\Win32" qtmaind.lib Qt5Cored.lib Qt5Guid.lib Qt5Widgetsd.lib Qt5Networkd.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /MANIFEST /ManifestFile:"Debug\PlotTickWidget.exe.intermediate.manifest" /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /DEBUG /PDB:"D:\BSV\Test\PlotTickWidget\Win32\Debug\PlotTickWidget.pdb" /SUBSYSTEM:WINDOWS /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:"D:\BSV\Test\PlotTickWidget\Win32\Debug\PlotTickWidget.lib" /MACHINE:X86 Debug\AbstactPlotter.obj
+         Debug\base_cmd.obj
+         Debug\base_dev_cmd.obj
+         Debug\chanindicwidget.obj
+         Debug\chanlabel.obj
+         Debug\checkboxsel.obj
+         Debug\comboboxsel.obj
+         Debug\ConnStatusIndicator.obj
+         Debug\c_obj_cmd.obj
+         Debug\DataSerializer.obj
+         Debug\DataStructCreator.obj
+         Debug\defectwidget.obj
+         Debug\devicecmdobject.obj
+         Debug\devicedata.obj
+         Debug\devicesettings.obj
+         Debug\dev_cmd.obj
+         Debug\dialloadsavepar.obj
+         Debug\dialpar.obj
+         Debug\ElementFactory.obj
+         Debug\element_info.obj
+         Debug\Fcs16.obj
+         Debug\moc_base_cmd.obj
+         Debug\moc_base_dev_cmd.obj
+         Debug\moc_chanindicwidget.obj
+         Debug\moc_chanlabel.obj
+         Debug\moc_checkboxsel.obj
+         Debug\moc_comboboxsel.obj
+         Debug\moc_c_obj_cmd.obj
+         Debug\moc_defectwidget.obj
+         Debug\moc_devicecmdobject.obj
+         Debug\moc_devicedata.obj
+         Debug\moc_devicesettings.obj
+         Debug\moc_dialloadsavepar.obj
+         Debug\moc_dialpar.obj
+         Debug\moc_ElementFactory.obj
+         Debug\moc_element_info.obj
+         Debug\moc_griditem.obj
+         Debug\moc_lineeditreturn.obj
+         Debug\moc_mainmenu.obj
+         Debug\moc_OscillogramPlotterSetter.obj
+         Debug\moc_OscillogramWidget.obj
+         Debug\moc_oscplotterscene.obj
+         Debug\moc_oscplotterview.obj
+         Debug\moc_paramedittoolbox.obj
+         Debug\moc_paramendrlineedit.obj
+         Debug\moc_paramendrlineeditsel.obj
+         Debug\moc_paramlineedit.obj
+         Debug\moc_paramlineeditsel.obj
+         Debug\moc_plotcoordwidget.obj
+         Debug\moc_plotmnemowidget.obj
+         Debug\moc_plotrowwidget.obj
+         Debug\moc_plotterswidget.obj
+         Debug\moc_plottickwidget.obj
+         Debug\moc_pushbuttonsel.obj
+         Debug\moc_RenderThread.obj
+         Debug\moc_renderwidget.obj
+         Debug\moc_settingtablemodel.obj
+         Debug\moc_strobitem.obj
+         Debug\moc_ThickElement.obj
+         Debug\moc_thicklaminwidget.obj
+         Debug\moc_thickwidget.obj
+         Debug\moc_tune_thr.obj
+         Debug\moc_udp_cmd.obj
+         Debug\qrc_plottickwidget.obj
+         Debug\griditem.obj
+         Debug\lineeditreturn.obj
+         Debug\main.obj
+         Debug\mainmenu.obj
+         Debug\OscillogramPlotterSetter.obj
+         Debug\OscillogramProperties.obj
+         Debug\OscillogramWidget.obj
+         Debug\oscplotterscene.obj
+         Debug\oscplotterview.obj
+         Debug\paramedittoolbox.obj
+         Debug\paramendrlineedit.obj
+         Debug\paramendrlineeditsel.obj
+         Debug\paramlineedit.obj
+         Debug\paramlineeditsel.obj
+         Debug\plotcoordwidget.obj
+         Debug\plotmnemowidget.obj
+         Debug\plotrowwidget.obj
+         Debug\plotterswidget.obj
+         Debug\PlotterWidget.obj
+         Debug\plottickwidget.obj
+         Debug\positiontesterplotter.obj
+         Debug\pushbuttonsel.obj
+         Debug\RenderThread.obj
+         Debug\renderwidget.obj
+         Debug\settingtablemodel.obj
+         Debug\strobitem.obj
+         Debug\ThickElement.obj
+         Debug\thicklaminwidget.obj
+         Debug\thickwidget.obj
+         Debug\tune_thr.obj
+         Debug\udp_cmd.obj
+         Debug\widgetselector.obj
+         Debug\WidgetShell.obj
+         Debug\widgetwithmouseproc.obj
+         LINK : D:\BSV\Test\PlotTickWidget\Win32\Debug\\PlotTickWidget.exe not found or not built by the last incremental link; performing full link
+         PlotTickWidget.vcxproj -> D:\BSV\Test\PlotTickWidget\Win32\Debug\PlotTickWidget.exe
+       Manifest:
+         C:\Program Files (x86)\Microsoft SDKs\Windows\v7.0A\bin\mt.exe /nologo /verbose /outputresource:"D:\BSV\Test\PlotTickWidget\Win32\Debug\\PlotTickWidget.exe;#1" /manifest Debug\PlotTickWidget.exe.intermediate.manifest
+       FinalizeBuildStatus:
+         Deleting file "Debug\PlotTickWidget.unsuccessfulbuild".
+         Touching "Debug\PlotTickWidget.lastbuildstate".
+     1>Done Building Project "D:\BSV\Test\PlotTickWidget\PlotTickWidget\PlotTickWidget.vcxproj" (build target(s)).
+
+Build succeeded.
+
+Time Elapsed 00:00:06.79
