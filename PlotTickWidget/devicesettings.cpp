@@ -68,7 +68,8 @@ const quint16 DeviceSettings::chan_rej[NUM_CHANS] =	{
 DeviceSettings::DeviceSettings(QObject *parent)
 	: QObject(parent),
 	_par_device(),
-	_changed_params(0)
+	_changed_params(0),
+	StrobsColor(5)
 {
 
 }
@@ -255,11 +256,11 @@ par_trk_t &trk_par = contr_par.trk_par;
 			cn_info.strb_info[j].on_extra_por = OFF;
 	}
 
-		StrobsColor.push_back(Qt::green);
-		StrobsColor.push_back(Qt::red);
-		StrobsColor.push_back(QColor(160, 0, 255));
-		StrobsColor.push_back(Qt::blue);
-		StrobsColor.push_back(Qt::yellow);
+		StrobsColor[0]=(Qt::green);
+		StrobsColor[1]=(Qt::red);
+		StrobsColor[2]=QColor(160, 0, 255);
+		StrobsColor[3]=(Qt::blue);
+		StrobsColor[4]=(Qt::yellow);
 
 		map_chan_name.insert(std::make_pair(TD_TOL_LAM,QString("TD_TOL_LAM")));
 		map_chan_name.insert(std::make_pair(TD_DEF_POPER,QString("TD_DEF_POPER")));
@@ -284,6 +285,7 @@ par_trk_t &trk_par = contr_par.trk_par;
 		_osc_color.insert(std::make_pair(QString("GRID_LINE_COLOR"),QColor(Qt::gray)));
 		_osc_color.insert(std::make_pair(QString("PLOT_LINE_COLOR"),QColor(0,100,0)));
 		_osc_color.insert(std::make_pair(QString("OSC_BACKGROUND"),QColor(255,255,255)));
+		_osc_color.insert(std::make_pair(QString("AK_FILL_COLOR"),QColor(31,255,210)));
 		par_thick_t &thick_par = contr_par.thick_par;
 
 		thick_par.thick = DEF_THICK;

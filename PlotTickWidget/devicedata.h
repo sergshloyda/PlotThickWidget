@@ -7,7 +7,7 @@
 namespace constants {
   const int NUM_CHAN  = 16;
   const int BUFF_SIZE = 8192;
-  const int count_elem_in_buffer=3;
+  const int count_elem_in_buffer=1;
   const int NUM_STRB=5;
 }
 class DeviceData : public QObject

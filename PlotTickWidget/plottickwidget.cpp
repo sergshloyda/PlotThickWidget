@@ -255,7 +255,7 @@ void PlotTickWidget::on_pushButton_clicked()
 	else
 	{
 		timer->start(60);
-		redraw_timer->start(60);
+		redraw_timer->start(15);
 		ui.pushButton->setText("Stop");
 	}
 }
@@ -265,7 +265,7 @@ void PlotTickWidget::on_readBtn_clicked()
 	qDebug() << "Reading from: " << filePath ;
 	DataSerializer serializer;
 
-
+#if 0
 	auto showDeviceParams = [](  DeviceSettings* deviceSettings)
 	{
 		qDebug()<<deviceSettings->getChansCount();
@@ -276,6 +276,7 @@ void PlotTickWidget::on_readBtn_clicked()
 				qDebug()<<deviceSettings->getChanModeName(i);
 		}
 	};
+#endif
 	QFile file(filePath);
 	if (file.open(QIODevice::ReadOnly ))
 	{
@@ -283,15 +284,15 @@ void PlotTickWidget::on_readBtn_clicked()
 		memset((void*)&dev_setting,0,sizeof(par_device_t));
 		serializer.readFile((QIODevice*)&file,dev_setting);
 		_deviceSettings->resetDeviceStruct(&dev_setting);
-		showDeviceParams(_deviceSettings);
-		QList<Element_Info*> elem_list=qApp->property("ElementList").value<QList<Element_Info*>>();
-		elem_list.clear();
-		serializer.readFile((QIODevice*)&file,elem_list);
-		qApp->setProperty("ElementList",QVariant::fromValue<QList<Element_Info*>>(elem_list));
-		_mnemo_widget->DrawPixmap(elem_list);
+		//showDeviceParams(_deviceSettings);
+		//QList<Element_Info*> elem_list=qApp->property("ElementList").value<QList<Element_Info*>>();
+		_elem_list.clear();
+		serializer.readFile((QIODevice*)&file,_elem_list);
+		//qApp->setProperty("ElementList",QVariant::fromValue<QList<Element_Info*>>(elem_list));
+		_mnemo_widget->DrawPixmap(_elem_list);
 		for (auto pos=_row_widgets.begin();pos!=_row_widgets.end();++pos)
 
-			(*pos)->DrawPixmap(elem_list);
+			(*pos)->DrawPixmap(_elem_list);
 	}
 	else
 	{
@@ -324,14 +325,14 @@ void PlotTickWidget::on_writeBtn_clicked()
 		DataSerializer serializer;
 		QList<Element_Info*> elem_list=qApp->property("ElementList").value<QList<Element_Info*>>();
 		serializer.writeFile((QIODevice*)&file,_deviceSettings->getDeviceStruct());
-		serializer.writeFile((QIODevice*)&file,elem_list);
-		qDeleteAll(elem_list.begin(),elem_list.end());
-		elem_list.clear();
+		serializer.writeFile((QIODevice*)&file,_elem_list);
+		qDeleteAll(_elem_list.begin(),_elem_list.end());
+		_elem_list.clear();
 		qApp->setProperty("ElementList",QVariant::fromValue<QList<Element_Info*>>(elem_list));
-		_mnemo_widget->DrawPixmap(elem_list);
+		_mnemo_widget->DrawPixmap(_elem_list);
 		for (auto pos=_row_widgets.begin();pos!=_row_widgets.end();++pos)
 
-			(*pos)->DrawPixmap(elem_list);
+			(*pos)->DrawPixmap(_elem_list);
 	}
 	else
 	{
@@ -564,12 +565,12 @@ void PlotTickWidget::update_osc_widget()
 }
 void PlotTickWidget::update_chan_rows()
 {
-	QList<Element_Info*> elem_list=qApp->property("ElementList").value<QList<Element_Info*>>();
+	//QList<Element_Info*> elem_list=qApp->property("ElementList").value<QList<Element_Info*>>();
 	for (auto pos=_row_widgets.begin();pos!=_row_widgets.end();++pos)
 	{
 
 		//qDebug()<<(*pos)->width();
-		(*pos)->DrawPixmap(elem_list);
+		(*pos)->DrawPixmap(_elem_list);
 	}
 }
 void PlotTickWidget::reset_buffers()

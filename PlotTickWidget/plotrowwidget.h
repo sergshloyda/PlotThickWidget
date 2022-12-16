@@ -3,6 +3,7 @@
 
 #include <QWidget>
 #include "RenderThread.h"
+#include "DrawDefectRow.h"
 class ChanLabel;
 class PlotRowWidget : public QWidget
 {

@@ -8,389 +8,409 @@ void RenderThread::rendering(int w,int h, QList<Element_Info*> list)
 	// emit onDrawTriangle(drawMyTriangle(w,h,cnt));
 	emit onDraw(_draw_strategy->Draw(w,h,list));
 }
-QImage DrawDefectRow::Draw(int w,int h,const QList<Element_Info*>& list)
-{
-	QImage img( w, h, QImage::Format_RGB888 );
-	img.fill( Qt::white );
-	QPainter painter;
-	painter.begin( &img );
-
-	painter.save();
-	//painter.setRenderHint(QPainter::Antialiasing, true);
-	painter.translate(2,0);
-
-	float pixmap_height=(float)h;
-	float pixmap_width=(float)w;
-	float left_tab=2;
-	const quint8 MaxAmpl=255;
-	float plot_step_y = (pixmap_height - 1)/ (float)MaxAmpl;
-	float plot_step_x=3.0;
-	const par_strb_t *strb_par = _deviceSettings->getAmplStrobArray(_num_chan);
-	const par_strb_info_t *strb_chan_info = _deviceSettings->getStrobInfoArray(_num_chan);
-
-
-	QColor SubStrobsColor[NUM_STRBS][NUM_STRBS_EXTRA+1];		// по уровням 
-
-
-	for(quint8 i = 1; i < NUM_STRBS; i++)		// первый строб пропускается
-	{
-		if(strb_chan_info[i].on_extra_por)
-		{
-			int hue;
-			int strat;
-			int value;
-			QColor tmp_Color=_deviceSettings->getStrobColor().at(i);
-			tmp_Color.getHsv(&hue, &strat, &value);
-
-			SubStrobsColor[i][0] = QColor::fromHsv(hue, 0.4f*strat, 0.5f*(255-value)+value);
-			SubStrobsColor[i][1] = QColor::fromHsv(hue, 0.6f*strat, 0.25f*(255-value)+value);
-			SubStrobsColor[i][2] =  tmp_Color;
-		}
-		else
-			SubStrobsColor[i][0] =_deviceSettings->getStrobColor().at(i);
-	}
-	int requested_size=pixmap_width/plot_step_x+1;
-	int beg=0;
-
-	float curr_x = 0;
-	float base_y = pixmap_height;
-
-	float next_x = curr_x + plot_step_x/2;
-	//PlotDefectElement lambda
-#if 1
-	auto PlotDefectElement=[=](QPainter& painter,const DefectElement* def_elem, float curr_x,const float next_x)
-	{
-		if(!def_elem->filled)
-			return;
-
-		// отрисовка включенных стробов в порядке возрастания амплитуды, за исключением сигнала АК, который рисуется линией на заднем плане (?) + закраской на переднем
-
-
-		const float base_y = pixmap_height;
-
-
-		// отрисовка стробов в порядке убывания амплитуды (в виде прямоугольников от 0 до strob_data.ampl)
-
-		bool any_def = false;
-
-		QColor strob_fill_color;
-
-		QRectF rect;
-		QRect rect2;
-		std::vector<std::pair<quint8,sum_strob_info_t>> sorted_strobs;
-		quint8 index_strob=0;
-		for(auto elem=def_elem->strobs.begin();elem!=def_elem->strobs.end();++elem)
-		{
-			sorted_strobs.push_back(std::make_pair(index_strob++,*elem));
-		}
-		std::sort(sorted_strobs.begin(),sorted_strobs.end(),[](const std::pair<quint8, sum_strob_info_t>& a,const std::pair<quint8, sum_strob_info_t>& b)  {
-			return a.second.strob_data.ampl > b.second.strob_data.ampl;});/**/
-			for( auto pos=sorted_strobs.begin();pos!=sorted_strobs.end();++pos)
-			{
-				//qDebug()<<"Index:"<<pos->first<<" Ampl:"<< pos->second.strob_data.ampl;
-				rect.setCoords(curr_x, base_y - pos->second.strob_data.ampl*plot_step_y, next_x, base_y);
-				strob_fill_color=_deviceSettings->getStrobColor().at(pos->first);
-				painter.fillRect(rect, strob_fill_color);
-			}
-
-	};
-#endif
-	int elements_count=0;
-
-	elements_count=list.count();
-
-
-	if(requested_size<elements_count)
-	{
-		beg=elements_count-requested_size;
-	}
-
-	for(int j = beg; j < elements_count; j++)
-	{
-		bool thick_filled = false;
-
-
-		DefectElement* def_elem;
-		/*	for(int jj=0;jj<_elem_list[j]->chan_info_array.count();jj++)
-		{
-		if(((jj+1)%2==0))
-		{*/
-		///_draw_mutex->lock();
-		def_elem=static_cast<DefectElement*>(list.at(j)->chan_info_array.at(_num_chan));
-		///_draw_mutex->unlock();
-		//		}
-		//}
-		PlotDefectElement(painter,def_elem,curr_x,next_x);
-		curr_x = next_x;
-		next_x = curr_x + plot_step_x;
-
-	}
-	QPen pen0;
-	QVector<qreal> dash_paretten;
-	dash_paretten << 4 << (3*(NUM_STRBS_EXTRA+1)*NUM_STRBS - 3);
-	pen0.setDashPattern(dash_paretten);
-
-	QPen pen1;
-	dash_paretten.clear();
-	dash_paretten << 2 << (3*(NUM_STRBS_EXTRA+1)*NUM_STRBS - 1);
-	pen1.setDashPattern(dash_paretten);
-
-	QPen pen2(Qt::white);
-	dash_paretten.clear();
-	dash_paretten << 1 << (3*(NUM_STRBS_EXTRA+1)*NUM_STRBS);
-	pen2.setDashPattern(dash_paretten);
-
-
-	int offset = 0;
-	QLineF line_base(left_tab, pixmap_height, pixmap_width, pixmap_height);
-
-
-	auto PlotStrobPorLevel=[](QPainter & painter, 
-		QPen &pen,
-		const QColor &col,
-		QPen &back_pen,
-		const QLineF &line,
-		int &offset)
-	{
-		pen.setColor(col);
-		pen.setDashOffset(++offset);
-		painter.setPen(pen);
-		painter.drawLine(line);
-
-		++offset;
-		back_pen.setDashOffset(++offset);
-		painter.setPen(back_pen);
-		painter.drawLine(line);
-	};
-	auto PorLabel=[=](QPainter& painter,quint8 porog)
-	{
-		painter.save();
-		painter.translate(0,MaxAmpl*plot_step_y-porog*plot_step_y);
-		painter.setPen(Qt::black);
-		painter.setFont(QFont("Arial", 9, QFont::Bold));
-		painter.drawText(QRect(0,0,100,50),qApp->trUtf8("%1").arg(porog));
-		painter.restore();
-	};
-
-	for(quint8 i = 0; i < NUM_STRBS; i++)
-	{
-		if(strb_par[i].on_strb)	// наличие многоуровневого строба не важно, важна абс. амплитуда строба
-		{
-			if(strb_chan_info[i].on_extra_por)
-			{
-				PlotStrobPorLevel(painter, pen1, SubStrobsColor[i][0], pen2, line_base.translated(0, -strb_par[i].por*plot_step_y), offset);
-				PorLabel(painter,strb_par[i].por);
-
-				for(quint8 j = 0; j < NUM_STRBS_EXTRA; j++)
-				{
-					PlotStrobPorLevel(painter, pen1, SubStrobsColor[i][j+1], pen2, line_base.translated(0, -strb_chan_info[i].extra_por[j]*plot_step_y), offset);
-					PorLabel(painter,strb_chan_info[i].extra_por[j]);
-				}
-
-			}
-			else
-				PlotStrobPorLevel(painter, pen0, _deviceSettings->getStrobColor().at(i), pen2, line_base.translated(0, -strb_par[i].por*plot_step_y), offset);
-
-		}
-	}
-	painter.restore();
-	painter.end();
-
-	return img;
-}
-
-QPixmap DrawDefectRow::DrawPixmap(int w,int h,const QList<Element_Info*>& list)
-{
-	/***определение вспомогоательных функций**/
-	//PlotDefectElement lambda
-#if 1
-	auto PlotDefectElement=[=](QPainter& painter,const DefectElement* def_elem, float curr_x,const float next_x,const float pixmap_height,const float plot_step_y)
-	{
-		if(!def_elem->filled)
-			return;
-
-		// отрисовка включенных стробов в порядке возрастания амплитуды, за исключением сигнала АК, который рисуется линией на заднем плане (?) + закраской на переднем
-
-
-		const float base_y = pixmap_height;
-
-
-		// отрисовка стробов в порядке убывания амплитуды (в виде прямоугольников от 0 до strob_data.ampl)
-
-		bool any_def = false;
-
-		QColor strob_fill_color;
-
-		QRectF rect;
-		QRect rect2;
-		std::vector<std::pair<quint8,sum_strob_info_t>> sorted_strobs;
-		quint8 index_strob=0;
-		for(auto elem=def_elem->strobs.begin();elem!=def_elem->strobs.end();++elem)
-		{
-			sorted_strobs.push_back(std::make_pair(index_strob++,*elem));
-		}
-		std::sort(sorted_strobs.begin(),sorted_strobs.end(),[](const std::pair<quint8, sum_strob_info_t>& a,const std::pair<quint8, sum_strob_info_t>& b)  {
-			return a.second.strob_data.ampl > b.second.strob_data.ampl;});/**/
-			for( auto pos=sorted_strobs.begin();pos!=sorted_strobs.end();++pos)
-			{
-				//qDebug()<<"Index:"<<pos->first<<" Ampl:"<< pos->second.strob_data.ampl;
-				rect.setCoords(curr_x, base_y - pos->second.strob_data.ampl*plot_step_y, next_x, base_y);
-				strob_fill_color=_deviceSettings->getStrobColor().at(pos->first);
-				painter.fillRect(rect, strob_fill_color);
-			}
-
-	};
-#endif
-
-	//PlotStrobPorLevel
-#if 1
-	auto PlotStrobPorLevel=[](QPainter & painter, 
-		QPen &pen,
-		const QColor &col,
-		QPen &back_pen,
-		const QLineF &line,
-		int &offset)
-	{
-		pen.setColor(col);
-		pen.setDashOffset(++offset);
-		painter.setPen(pen);
-		painter.drawLine(line);
-
-		++offset;
-		back_pen.setDashOffset(++offset);
-		painter.setPen(back_pen);
-		painter.drawLine(line);
-	};
-
-
-	auto PorLabel=[=](QPainter& painter,const quint8 porog,const quint8 MaxAmpl,const float plot_step_y)
-	{
-		painter.save();
-		painter.translate(0,MaxAmpl*plot_step_y-porog*plot_step_y);
-		painter.setPen(Qt::black);
-		painter.setFont(QFont("Arial", 7));
-		painter.drawText(QRect(0,0,100,50),qApp->trUtf8("%1").arg(porog));
-		painter.restore();
-	};
-#endif
-	//setSubStrobsColors
-#if 1
-	auto setSubStrobsColors=[=](QColor sub_strob_color_array[][3],const par_strb_info_t *strb_chan_info)
-	{
-
-			for(quint8 i = 1; i < NUM_STRBS; i++)		// первый строб пропускается
-	{
-		if(strb_chan_info[i].on_extra_por)
-		{
-			int hue;
-			int strat;
-			int value;
-			QColor tmp_Color=_deviceSettings->getStrobColor().at(i);
-			tmp_Color.getHsv(&hue, &strat, &value);
-
-			sub_strob_color_array[i][0] = QColor::fromHsv(hue, 0.4f*strat, 0.5f*(255-value)+value);
-			sub_strob_color_array[i][1] = QColor::fromHsv(hue, 0.6f*strat, 0.25f*(255-value)+value);
-			sub_strob_color_array[i][2] =  tmp_Color;
-		}
-		else
-			sub_strob_color_array[i][0] =_deviceSettings->getStrobColor().at(i);
-	}
-	};
-#endif
-	QPixmap pixmap(w,h);
-	pixmap.fill(Qt::white);
-	QPainter painter;
-	painter.begin(&pixmap);;
-	painter.drawRect(1,1,w-1,h-1);
-	painter.save();
-	painter.translate(1,1);
-
-	float pixmap_height=(float)h;
-	float pixmap_width=(float)w;
-	float left_tab=0;
-	const quint8 MaxAmpl=255;
-	float plot_step_y = (pixmap_height - 1)/ (float)MaxAmpl;
-	float plot_step_x=3.0;
-	const par_strb_t *strb_par = _deviceSettings->getAmplStrobArray(_num_chan);
-	const par_strb_info_t *strb_chan_info = _deviceSettings->getStrobInfoArray(_num_chan);
-	
-	QColor SubStrobsColor[NUM_STRBS][NUM_STRBS_EXTRA+1];		// по уровням 
-
-	setSubStrobsColors(SubStrobsColor,strb_chan_info);
-
-	int requested_size=pixmap_width/plot_step_x+1;
-	/*int beg=0;
-	float curr_x = 0;*/
-	float base_y = pixmap_height;
-	//float next_x = curr_x + plot_step_x/2;
-	
-	int elements_count=0;
-
-	QPen pen0;
-	QVector<qreal> dash_paretten;
-	dash_paretten << 4 << (3*(NUM_STRBS_EXTRA+1)*NUM_STRBS - 3);
-	pen0.setDashPattern(dash_paretten);
-
-	QPen pen1;
-	dash_paretten.clear();
-	dash_paretten << 2 << (3*(NUM_STRBS_EXTRA+1)*NUM_STRBS - 1);
-	pen1.setDashPattern(dash_paretten);
-
-	QPen pen2(Qt::white);
-	dash_paretten.clear();
-	dash_paretten << 1 << (3*(NUM_STRBS_EXTRA+1)*NUM_STRBS);
-	pen2.setDashPattern(dash_paretten);
-	
-	int offset = 0;
-	QLineF line_base(left_tab, pixmap_height, pixmap_width, pixmap_height);
-	float curr_x = left_tab;
-	float next_x = left_tab + plot_step_x/2;
-	if(list.count()>0)
-	{
-		/*DefectElement* def_elem;
-		def_elem=;*/
-		PlotDefectElement(painter,
-			static_cast<DefectElement*>(list.at(_beg_index-1)->chan_info_array.at(_num_chan)),
-			curr_x,next_x,pixmap_height,plot_step_y);
-
-	elements_count=list.count();
-	if(requested_size<elements_count)
-	{
-		_beg_index=elements_count-requested_size;
-	}
-	for(int j = _beg_index; j < elements_count; j++)
-	{
-		bool thick_filled = false;
-		DefectElement* def_elem;
-		def_elem=static_cast<DefectElement*>(list.at(j)->chan_info_array.at(_num_chan));
-		PlotDefectElement(painter,def_elem,curr_x,next_x,pixmap_height,plot_step_y);
-		curr_x = next_x;
-		next_x = curr_x + plot_step_x;
-	}
-	}
-	
-	for(quint8 i = 0; i < NUM_STRBS; i++)
-	{
-		if(strb_par[i].on_strb)	// наличие многоуровневого строба не важно, важна абс. амплитуда строба
-		{
-			if(strb_chan_info[i].on_extra_por)
-			{
-				PlotStrobPorLevel(painter, pen1, SubStrobsColor[i][0], pen2, line_base.translated(0, -strb_par[i].por*plot_step_y), offset);
-				//PorLabel(painter,strb_par[i].por);
-				for(quint8 j = 0; j < NUM_STRBS_EXTRA; j++)
-				{
-					PlotStrobPorLevel(painter, pen1, SubStrobsColor[i][j+1], pen2, line_base.translated(0, -strb_chan_info[i].extra_por[j]*plot_step_y), offset);
-					//	PorLabel(painter,strb_chan_info[i].extra_por[j]);
-				}
-			}
-			else
-				PlotStrobPorLevel(painter, pen0, _deviceSettings->getStrobColor().at(i), pen2, line_base.translated(0, -strb_par[i].por*plot_step_y), offset);
-		}
-	}
-	painter.restore();
-	painter.end();
-	return pixmap;
-}
+//QImage DrawDefectRow::Draw(int w,int h,const QList<Element_Info*>& list)
+//{
+//	QImage img( w, h, QImage::Format_RGB888 );
+//	img.fill( Qt::white );
+//	QPainter painter;
+//	painter.begin( &img );
+//
+//	painter.save();
+//	//painter.setRenderHint(QPainter::Antialiasing, true);
+//	painter.translate(2,0);
+//
+//	float pixmap_height=(float)h;
+//	float pixmap_width=(float)w;
+//	float left_tab=2;
+//	const quint8 MaxAmpl=255;
+//	float plot_step_y = (pixmap_height - 1)/ (float)MaxAmpl;
+//	float plot_step_x=3.0;
+//	const par_strb_t *strb_par = _deviceSettings->getAmplStrobArray(_num_chan);
+//	const par_strb_info_t *strb_chan_info = _deviceSettings->getStrobInfoArray(_num_chan);
+//
+//
+//	QColor SubStrobsColor[NUM_STRBS][NUM_STRBS_EXTRA+1];		// по уровням 
+//
+//
+//	for(quint8 i = 1; i < NUM_STRBS; i++)		// первый строб пропускается
+//	{
+//		if(strb_chan_info[i].on_extra_por)
+//		{
+//			int hue;
+//			int strat;
+//			int value;
+//			QColor tmp_Color=_deviceSettings->getStrobColor().at(i);
+//			tmp_Color.getHsv(&hue, &strat, &value);
+//
+//			SubStrobsColor[i][0] = QColor::fromHsv(hue, 0.4f*strat, 0.5f*(255-value)+value);
+//			SubStrobsColor[i][1] = QColor::fromHsv(hue, 0.6f*strat, 0.25f*(255-value)+value);
+//			SubStrobsColor[i][2] =  tmp_Color;
+//		}
+//		else
+//			SubStrobsColor[i][0] =_deviceSettings->getStrobColor().at(i);
+//	}
+//	int requested_size=pixmap_width/plot_step_x+1;
+//	int beg=0;
+//
+//	float curr_x = 0;
+//	float base_y = pixmap_height;
+//
+//	float next_x = curr_x + plot_step_x/2;
+//	//PlotDefectElement lambda
+//#if 1
+//	auto PlotDefectElement=[=](QPainter& painter,const DefectElement* def_elem, float curr_x,const float next_x)
+//	{
+//		if(!def_elem->filled)
+//			return;
+//
+//		// отрисовка включенных стробов в порядке возрастания амплитуды, за исключением сигнала АК, который рисуется линией на заднем плане (?) + закраской на переднем
+//
+//
+//		const float base_y = pixmap_height;
+//
+//
+//		// отрисовка стробов в порядке убывания амплитуды (в виде прямоугольников от 0 до strob_data.ampl)
+//
+//		bool any_def = false;
+//
+//		QColor strob_fill_color;
+//
+//		QRectF rect;
+//		QRect rect2;
+//		std::vector<std::pair<quint8,sum_strob_info_t>> sorted_strobs;
+//		quint8 index_strob=0;
+//		for(auto elem=def_elem->strobs.begin();elem!=def_elem->strobs.end();++elem)
+//		{
+//			sorted_strobs.push_back(std::make_pair(index_strob++,*elem));
+//		}
+//		std::sort(sorted_strobs.begin(),sorted_strobs.end(),[](const std::pair<quint8, sum_strob_info_t>& a,const std::pair<quint8, sum_strob_info_t>& b)  {
+//			return a.second.strob_data.ampl > b.second.strob_data.ampl;});/**/
+//			for( auto pos=sorted_strobs.begin();pos!=sorted_strobs.end();++pos)
+//			{
+//				//qDebug()<<"Index:"<<pos->first<<" Ampl:"<< pos->second.strob_data.ampl;
+//				rect.setCoords(curr_x, base_y - pos->second.strob_data.ampl*plot_step_y, next_x, base_y);
+//				strob_fill_color=_deviceSettings->getStrobColor().at(pos->first);
+//				painter.fillRect(rect, strob_fill_color);
+//			}
+//
+//	};
+//#endif
+//	int elements_count=0;
+//
+//	elements_count=list.count();
+//
+//
+//	if(requested_size<elements_count)
+//	{
+//		beg=elements_count-requested_size;
+//	}
+//
+//	for(int j = beg; j < elements_count; j++)
+//	{
+//		bool thick_filled = false;
+//
+//
+//		DefectElement* def_elem;
+//		/*	for(int jj=0;jj<_elem_list[j]->chan_info_array.count();jj++)
+//		{
+//		if(((jj+1)%2==0))
+//		{*/
+//		///_draw_mutex->lock();
+//		def_elem=static_cast<DefectElement*>(list.at(j)->chan_info_array.at(_num_chan));
+//		///_draw_mutex->unlock();
+//		//		}
+//		//}
+//		PlotDefectElement(painter,def_elem,curr_x,next_x);
+//		curr_x = next_x;
+//		next_x = curr_x + plot_step_x;
+//
+//	}
+//	QPen pen0;
+//	QVector<qreal> dash_paretten;
+//	dash_paretten << 4 << (3*(NUM_STRBS_EXTRA+1)*NUM_STRBS - 3);
+//	pen0.setDashPattern(dash_paretten);
+//
+//	QPen pen1;
+//	dash_paretten.clear();
+//	dash_paretten << 2 << (3*(NUM_STRBS_EXTRA+1)*NUM_STRBS - 1);
+//	pen1.setDashPattern(dash_paretten);
+//
+//	QPen pen2(Qt::white);
+//	dash_paretten.clear();
+//	dash_paretten << 1 << (3*(NUM_STRBS_EXTRA+1)*NUM_STRBS);
+//	pen2.setDashPattern(dash_paretten);
+//
+//
+//	int offset = 0;
+//	QLineF line_base(left_tab, pixmap_height, pixmap_width, pixmap_height);
+//
+//
+//	auto PlotStrobPorLevel=[](QPainter & painter, 
+//		QPen &pen,
+//		const QColor &col,
+//		QPen &back_pen,
+//		const QLineF &line,
+//		int &offset)
+//	{
+//		pen.setColor(col);
+//		pen.setDashOffset(++offset);
+//		painter.setPen(pen);
+//		painter.drawLine(line);
+//
+//		++offset;
+//		back_pen.setDashOffset(++offset);
+//		painter.setPen(back_pen);
+//		painter.drawLine(line);
+//	};
+//	auto PorLabel=[=](QPainter& painter,quint8 porog)
+//	{
+//		painter.save();
+//		painter.translate(0,MaxAmpl*plot_step_y-porog*plot_step_y);
+//		painter.setPen(Qt::black);
+//		painter.setFont(QFont("Arial", 9, QFont::Bold));
+//		painter.drawText(QRect(0,0,100,50),qApp->trUtf8("%1").arg(porog));
+//		painter.restore();
+//	};
+//
+//	for(quint8 i = 0; i < NUM_STRBS; i++)
+//	{
+//		if(strb_par[i].on_strb)	// наличие многоуровневого строба не важно, важна абс. амплитуда строба
+//		{
+//			if(strb_chan_info[i].on_extra_por)
+//			{
+//				PlotStrobPorLevel(painter, pen1, SubStrobsColor[i][0], pen2, line_base.translated(0, -strb_par[i].por*plot_step_y), offset);
+//				PorLabel(painter,strb_par[i].por);
+//
+//				for(quint8 j = 0; j < NUM_STRBS_EXTRA; j++)
+//				{
+//					PlotStrobPorLevel(painter, pen1, SubStrobsColor[i][j+1], pen2, line_base.translated(0, -strb_chan_info[i].extra_por[j]*plot_step_y), offset);
+//					PorLabel(painter,strb_chan_info[i].extra_por[j]);
+//				}
+//
+//			}
+//			else
+//				PlotStrobPorLevel(painter, pen0, _deviceSettings->getStrobColor().at(i), pen2, line_base.translated(0, -strb_par[i].por*plot_step_y), offset);
+//
+//		}
+//	}
+//	painter.restore();
+//	painter.end();
+//
+//	return img;
+//}
+//
+//QPixmap DrawDefectRow::DrawPixmap(int w,int h,const QList<Element_Info*>& list)
+//{
+//	/***определение вспомогоательных функций**/
+//
+//
+//
+//	//PlotDefectElement lambda
+//
+//
+//	//PlotStrobPorLevel
+//#if 1
+//	auto PlotStrobPorLevel=[](QPainter & painter, 
+//		QPen &pen,
+//		const QColor &col,
+//		QPen &back_pen,
+//		const QLineF &line,
+//		int &offset)
+//	{
+//		pen.setColor(col);
+//		pen.setDashOffset(++offset);
+//		painter.setPen(pen);
+//		painter.drawLine(line);
+//
+//		++offset;
+//		back_pen.setDashOffset(++offset);
+//		painter.setPen(back_pen);
+//		painter.drawLine(line);
+//	};
+//
+//
+//	auto PorLabel=[=](QPainter& painter,const quint8 porog,const quint8 MaxAmpl,const float plot_step_y)
+//	{
+//		painter.save();
+//		painter.translate(0,MaxAmpl*plot_step_y-porog*plot_step_y);
+//		painter.setPen(Qt::black);
+//		painter.setFont(QFont("Arial", 7));
+//		painter.drawText(QRect(0,0,100,50),qApp->trUtf8("%1").arg(porog));
+//		painter.restore();
+//	};
+//#endif
+//	//setSubStrobsColors
+//#if 1
+//	auto setSubStrobsColors=[=](QColor sub_strob_color_array[][3],const par_strb_info_t *strb_chan_info)
+//	{
+//
+//		for(quint8 i = 1; i < NUM_STRBS; i++)		// первый строб пропускается
+//		{
+//			if(strb_chan_info[i].on_extra_por)
+//			{
+//				int hue;
+//				int strat;
+//				int value;
+//				QColor tmp_Color=_deviceSettings->getStrobColor().at(i);
+//				tmp_Color.getHsv(&hue, &strat, &value);
+//
+//				sub_strob_color_array[i][0] = QColor::fromHsv(hue, 0.4f*strat, 0.5f*(255-value)+value);
+//				sub_strob_color_array[i][1] = QColor::fromHsv(hue, 0.6f*strat, 0.25f*(255-value)+value);
+//				sub_strob_color_array[i][2] =  tmp_Color;
+//			}
+//			else
+//				sub_strob_color_array[i][0] =_deviceSettings->getStrobColor().at(i);
+//		}
+//	};
+//#endif
+//	QPixmap pixmap(w,h);
+//	pixmap.fill(Qt::white);
+//	QPainter painter;
+//	painter.begin(&pixmap);;
+//	painter.drawRect(1,1,w-1,h-1);
+//	painter.save();
+//	painter.translate(1,1);
+//
+//	float pixmap_height=(float)h;
+//	float pixmap_width=(float)w;
+//	float left_tab=0;
+//	const quint8 MaxAmpl=255;
+//	float plot_step_y = (pixmap_height - 1)/ (float)MaxAmpl;
+//	float plot_step_x=3.0;
+//	const par_strb_t *strb_par = _deviceSettings->getAmplStrobArray(_num_chan);
+//	const par_strb_info_t *strb_chan_info = _deviceSettings->getStrobInfoArray(_num_chan);
+//
+//	QColor SubStrobsColor[NUM_STRBS][NUM_STRBS_EXTRA+1];		// по уровням 
+//
+//
+//
+//
+//	setSubStrobsColors(SubStrobsColor,strb_chan_info);
+//
+//	int requested_size=pixmap_width/plot_step_x+1;
+//	/*int beg=0;
+//	float curr_x = 0;*/
+//	float base_y = pixmap_height;
+//	//float next_x = curr_x + plot_step_x/2;
+//
+//	int elements_count=0;
+//
+//	QPen pen0;
+//	QVector<qreal> dash_paretten;
+//	dash_paretten << 4 << (3*(NUM_STRBS_EXTRA+1)*NUM_STRBS - 3);
+//	pen0.setDashPattern(dash_paretten);
+//
+//	QPen pen1;
+//	dash_paretten.clear();
+//	dash_paretten << 2 << (3*(NUM_STRBS_EXTRA+1)*NUM_STRBS - 1);
+//	pen1.setDashPattern(dash_paretten);
+//
+//	QPen pen2(Qt::white);
+//	dash_paretten.clear();
+//	dash_paretten << 1 << (3*(NUM_STRBS_EXTRA+1)*NUM_STRBS);
+//	pen2.setDashPattern(dash_paretten);
+//
+//	int offset = 0;
+//	QLineF line_base(left_tab, pixmap_height, pixmap_width, pixmap_height);
+//	float curr_x = left_tab;
+//	float next_x = left_tab + plot_step_x/2;
+//	if(list.count()>0)
+//	{
+//		/*DefectElement* def_elem;
+//		def_elem=;*/
+//		PlotDefectElement(painter,
+//			static_cast<DefectElement*>(list.at(_beg_index-1)->chan_info_array.at(_num_chan)),
+//			curr_x,next_x,pixmap_height,plot_step_y);
+//
+//		elements_count=list.count();
+//		if(requested_size<elements_count)
+//		{
+//			_beg_index=elements_count-requested_size;
+//		}
+//
+//		_timer.start();
+//
+//		for(int j = _beg_index; j < elements_count; j++)
+//		{
+//			bool thick_filled = false;
+//			DefectElement* def_elem;
+//			def_elem=static_cast<DefectElement*>(list.at(j)->chan_info_array.at(_num_chan));
+//			PlotDefectElement(painter,def_elem,curr_x,next_x,pixmap_height,plot_step_y);
+//			curr_x = next_x;
+//			next_x = curr_x + plot_step_x;
+//		}
+//
+//		if (_timer.isValid())
+//		{
+//			qDebug() << "gui time = " << _timer.elapsed()<<" elements_count:"<<elements_count;
+//			_timer.invalidate();
+//		}
+//	}
+//
+//	for(quint8 i = 0; i < NUM_STRBS; i++)
+//	{
+//		if(strb_par[i].on_strb)	// наличие многоуровневого строба не важно, важна абс. амплитуда строба
+//		{
+//			if(strb_chan_info[i].on_extra_por)
+//			{
+//				PlotStrobPorLevel(painter, pen1, SubStrobsColor[i][0], pen2, line_base.translated(0, -strb_par[i].por*plot_step_y), offset);
+//				//PorLabel(painter,strb_par[i].por);
+//				for(quint8 j = 0; j < NUM_STRBS_EXTRA; j++)
+//				{
+//					PlotStrobPorLevel(painter, pen1, SubStrobsColor[i][j+1], pen2, line_base.translated(0, -strb_chan_info[i].extra_por[j]*plot_step_y), offset);
+//					//	PorLabel(painter,strb_chan_info[i].extra_por[j]);
+//				}
+//			}
+//			else
+//				PlotStrobPorLevel(painter, pen0, _deviceSettings->getStrobColor().at(i), pen2, line_base.translated(0, -strb_par[i].por*plot_step_y), offset);
+//		}
+//	}
+//	painter.restore();
+//	painter.end();
+//	return pixmap;
+//}
+//
+//void DrawDefectRow::PlotDefectElement(QPainter& painter,const DefectElement* def_elem, float curr_x,const float next_x,const float pixmap_height,const float plot_step_y)
+//{
+//	
+//		if(!def_elem->filled)
+//			return;
+//
+//		// отрисовка включенных стробов в порядке возрастания амплитуды, за исключением сигнала АК, который рисуется линией на заднем плане (?) + закраской на переднем
+//
+//
+//		const float base_y = pixmap_height;
+//
+//
+//		// отрисовка стробов в порядке убывания амплитуды (в виде прямоугольников от 0 до strob_data.ampl)
+//
+//		bool any_def = false;
+//
+//		QColor strob_fill_color;
+//
+//		QRectF rect;
+//		QRect rect2;
+//		std::vector<std::pair<quint8,sum_strob_info_t>> sorted_strobs;
+//		quint8 index_strob=0;
+//
+//		for(auto elem=def_elem->strobs.begin();elem!=def_elem->strobs.end();++elem)
+//		{
+//			sorted_strobs.push_back(std::make_pair(index_strob++,*elem));
+//		}
+//		/*std::sort(sorted_strobs.begin(),sorted_strobs.end(),[](const std::pair<quint8, sum_strob_info_t>& a,const std::pair<quint8, sum_strob_info_t>& b)  {
+//			return a.second.strob_data.ampl > b.second.strob_data.ampl;});*/
+//
+//
+//			for( auto pos=sorted_strobs.begin();pos!=sorted_strobs.end();++pos)
+//			{
+//				//qDebug()<<"Index:"<<pos->first<<" Ampl:"<< pos->second.strob_data.ampl;
+//				rect.setCoords(curr_x, base_y - pos->second.strob_data.ampl*plot_step_y, next_x, base_y);
+//				strob_fill_color=_deviceSettings->getStrobColor().at(pos->first);
+//				painter.fillRect(rect, strob_fill_color);
+//			}
+//
+//
+//}
 QPixmap DrawThickRow::DrawPixmap(int w,int h,const QList<Element_Info*>& elem_list)
 {
 
@@ -2756,82 +2776,82 @@ QPixmap DrawMnemoRow::DrawPixmap(int w,int h,const QList<Element_Info*>& elem_li
 		painter.fillRect(QRectF(0, margin , next_x - curr_x, mnemo_elem_height*flaw_plos_weigth),_flaw_prod_color);
 		painter.translate(0,mnemo_elem_height*flaw_plos_weigth+margin);
 		painter.fillRect(QRectF(0, 0, next_x - curr_x, mnemo_elem_height*flaw_poper_weigth), _flaw_poper_color );
-	//	qDebug()<<"p_def_dim->flaw_plos =" << def_dim.flaw_plos<<" p_def_dim->flaw_poper =" << def_dim.flaw_poper;
+		//	qDebug()<<"p_def_dim->flaw_plos =" << def_dim.flaw_plos<<" p_def_dim->flaw_poper =" << def_dim.flaw_poper;
 		painter.restore();
 	};
 
 
 	auto _PlotMnemoElem=[=]( QPainter& painter,
-							const Element_Info* elem_info,
-							const float curr_x,
-							const float next_x,
-							const std::vector<int>& row_b,
-							const std::vector<int>& row_height,
-							const float flaw_height_coeff)
+		const Element_Info* elem_info,
+		const float curr_x,
+		const float next_x,
+		const std::vector<int>& row_b,
+		const std::vector<int>& row_height,
+		const float flaw_height_coeff)
 	{
 		quint8 mnemo_flags = _deviceSettings->getUsedLayers();
 		quint8 curr_mnemo_row = 0;
-				quint8 curr_mnemo_layer = 0;
+		quint8 curr_mnemo_layer = 0;
 
 
-				if(mnemo_flags & USED_LAYER_0)
-				{
-					PlotSingleMnemoElem(	painter, 
-						elem_info,
-						curr_mnemo_layer,
-						curr_x,
-						next_x,
-						row_b[curr_mnemo_row],
-						row_height[curr_mnemo_row],
-						flaw_height_coeff);
-					curr_mnemo_row++;
-				}
-				curr_mnemo_layer++;
+		if(mnemo_flags & USED_LAYER_0)
+		{
+			PlotSingleMnemoElem(	painter, 
+				elem_info,
+				curr_mnemo_layer,
+				curr_x,
+				next_x,
+				row_b[curr_mnemo_row],
+				row_height[curr_mnemo_row],
+				flaw_height_coeff);
+			curr_mnemo_row++;
+		}
+		curr_mnemo_layer++;
 
-				if(mnemo_flags & USED_LAYER_1)
-				{
-					PlotSingleMnemoElem(	painter, 
-						elem_info,
-						curr_mnemo_layer,
-						curr_x,
-						next_x,
-						row_b[curr_mnemo_row],
-						row_height[curr_mnemo_row],
-						flaw_height_coeff);
-					curr_mnemo_row++;
-				}
-				curr_mnemo_layer++;
+		if(mnemo_flags & USED_LAYER_1)
+		{
+			PlotSingleMnemoElem(	painter, 
+				elem_info,
+				curr_mnemo_layer,
+				curr_x,
+				next_x,
+				row_b[curr_mnemo_row],
+				row_height[curr_mnemo_row],
+				flaw_height_coeff);
+			curr_mnemo_row++;
+		}
+		curr_mnemo_layer++;
 
-				if(mnemo_flags & USED_LAYER_2)
-					PlotSingleMnemoElem(	painter, 
-					elem_info,
-					curr_mnemo_layer,
-					curr_x,
-					next_x,
-					row_b[curr_mnemo_row],
-					row_height[curr_mnemo_row],
-					flaw_height_coeff);
+		if(mnemo_flags & USED_LAYER_2)
+			PlotSingleMnemoElem(	painter, 
+			elem_info,
+			curr_mnemo_layer,
+			curr_x,
+			next_x,
+			row_b[curr_mnemo_row],
+			row_height[curr_mnemo_row],
+			flaw_height_coeff);
 
 	};
 #endif//_PlotMnemoElem lambda
 	/*SetNumMnemoRows lambda в зависимости от установленных флагов определяет количество строк в мнемосхеме*/
 #if 1
-auto SetNumMnemoRows=[=](quint8& num_mnemo_rows,quint8& num_thick_row){
-quint8 mnemo_flags = _deviceSettings->getUsedLayers();
+	auto SetNumMnemoRows=[=](quint8& num_mnemo_rows,quint8& num_thick_row){
+		quint8 mnemo_flags = _deviceSettings->getUsedLayers();
 
 
 
-	if(mnemo_flags & USED_LAYER_0)
-		num_mnemo_rows++;
-	if(mnemo_flags & USED_LAYER_1)
-		num_mnemo_rows++;
-	if(mnemo_flags & USED_LAYER_2)
-		num_mnemo_rows++;
-	if(mnemo_flags & USED_LAYER_THICK)
-	{
-		num_thick_row = num_mnemo_rows;
-		num_mnemo_rows++;
-	}
+		if(mnemo_flags & USED_LAYER_0)
+			num_mnemo_rows++;
+		if(mnemo_flags & USED_LAYER_1)
+			num_mnemo_rows++;
+		if(mnemo_flags & USED_LAYER_2)
+			num_mnemo_rows++;
+		if(mnemo_flags & USED_LAYER_THICK)
+		{
+			num_thick_row = num_mnemo_rows;
+			num_mnemo_rows++;
+		}
 	};
 #endif//SetNumMnemoRows
 
@@ -2855,7 +2875,7 @@ quint8 mnemo_flags = _deviceSettings->getUsedLayers();
 	const float flaw_height_coeff = (pix_h_step - 1.0f) / MAX_FLAW_SIZE;
 	std::vector<int> row_b(num_mnemo_rows+1);
 	std::vector<int> row_height(num_mnemo_rows);
-		
+
 	SetupMnemoRowDim(row_b,row_height,num_mnemo_rows,pix_h_step);
 	PlotMnemoRowsLine(painter,row_b,num_mnemo_rows);
 	float curr_x = left_tab;
@@ -2867,7 +2887,7 @@ quint8 mnemo_flags = _deviceSettings->getUsedLayers();
 		_PlotMnemoElem(painter,elem_list.at(_beg_index-1),curr_x,next_x,row_b,row_height,flaw_height_coeff);
 		curr_x = next_x;
 		int elements_count=0;
-	//	int beg=1;
+		//	int beg=1;
 		elements_count=elem_list.count();
 		int requested_size=pixmap_width/plot_step_x+1;
 
@@ -2905,10 +2925,10 @@ quint8 mnemo_flags = _deviceSettings->getUsedLayers();
 DrawCoordRow::DrawCoordRow(DeviceSettings* dev_settings):DrawStrategy(dev_settings)
 {
 }
- QImage DrawCoordRow::Draw(int w,int h,const QList<Element_Info*>& list)
- {
-	 return QImage();
- }
+QImage DrawCoordRow::Draw(int w,int h,const QList<Element_Info*>& list)
+{
+	return QImage();
+}
 QPixmap DrawCoordRow::DrawPixmap(int w,int h, const QList<Element_Info*>& elem_list)
 {
 	/* PrintCoordValueTxt lambda отображает координату value в заданном месте*/
@@ -2931,10 +2951,10 @@ QPixmap DrawCoordRow::DrawPixmap(int w,int h, const QList<Element_Info*>& elem_l
 	const float plot_step_x=3.0;
 	const float left_tab=0.0f;
 	float curr_x = left_tab;
-	
+
 	if(elem_list.count()>0)
 	{
-		
+
 		int elements_count=0;
 		int beg=0;
 		elements_count=elem_list.count();
@@ -2946,29 +2966,29 @@ QPixmap DrawCoordRow::DrawPixmap(int w,int h, const QList<Element_Info*>& elem_l
 		}
 		for (int i=beg;i<elements_count;i++)
 		{
-			
+
 
 			if(elem_list.at(i)->filled)
 			{
-				
-						
-						if(elem_list.at(i)->coord%10==0)
-						{
-							QLineF line( curr_x,  pixmap_height/4, curr_x,  pixmap_height);
-							painter.drawLine(line);
-							if((curr_x+txtWidth)<pixmap_width)
-							PrintCoordValueTxt(painter,curr_x,pixmap_height,elem_list.at(i)->coord);
-						}
-						else if(elem_list.at(i)->coord%5==0)
-						{
-							QLineF line( curr_x,  4*pixmap_height/7, curr_x,  pixmap_height);
-							painter.drawLine(line);
-						}
-						else
-						{
-							QLineF line( curr_x,  3*pixmap_height/4, curr_x,  pixmap_height);
-							painter.drawLine(line);
-						}
+
+
+				if(elem_list.at(i)->coord%10==0)
+				{
+					QLineF line( curr_x,  pixmap_height/4, curr_x,  pixmap_height);
+					painter.drawLine(line);
+					if((curr_x+txtWidth)<pixmap_width)
+						PrintCoordValueTxt(painter,curr_x,pixmap_height,elem_list.at(i)->coord);
+				}
+				else if(elem_list.at(i)->coord%5==0)
+				{
+					QLineF line( curr_x,  4*pixmap_height/7, curr_x,  pixmap_height);
+					painter.drawLine(line);
+				}
+				else
+				{
+					QLineF line( curr_x,  3*pixmap_height/4, curr_x,  pixmap_height);
+					painter.drawLine(line);
+				}
 			}
 
 			curr_x+=plot_step_x;
@@ -2979,10 +2999,10 @@ QPixmap DrawCoordRow::DrawPixmap(int w,int h, const QList<Element_Info*>& elem_l
 	return pixmap;
 }
 
- QImage DrawBScanRow::Draw(int w,int h,const QList<Element_Info*>& list)
- {
-	 return QImage();
- }
+QImage DrawBScanRow::Draw(int w,int h,const QList<Element_Info*>& list)
+{
+	return QImage();
+}
 QPixmap DrawBScanRow::DrawPixmap(int w,int h, const QList<Element_Info*>& elem_list)
 {
 	QPixmap pixmap(w,h);

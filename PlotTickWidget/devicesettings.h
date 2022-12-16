@@ -190,9 +190,13 @@ public:
 	{
 		return _par_device.contr_par.trk_par.cn_list.cn_info[nChan].strb_info;
 	}
-	const std::vector<QColor>& getStrobColor()
+	const std::vector<QColor>& getStrobsColor()
 	{
 		return StrobsColor;
+	}
+	const QColor & getStrobColor(quint8 strob)
+	{
+		return StrobsColor[strob];
 	}
 	const QString& getChanModeName(const quint8 nChan)
 	{

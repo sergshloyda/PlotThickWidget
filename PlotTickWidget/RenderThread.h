@@ -5,6 +5,7 @@
 #include "ThickElement.h"
 #include "devicesettings.h"
 #include "qapplication.h"
+#include "qelapsedtimer.h"
 class DrawStrategy
 {
 public:
@@ -19,18 +20,22 @@ protected:
 	DeviceSettings* _deviceSettings;
 	
 };
-class DrawDefectRow:public DrawStrategy
-{
-public:
-	DrawDefectRow(quint8 num_chan,DeviceSettings* device_settings):DrawStrategy(device_settings),
-	  _num_chan(num_chan),_beg_index(1) {}
-		
-	virtual QImage Draw(int w,int h,const QList<Element_Info*>& list)override;
-	virtual QPixmap DrawPixmap(int w,int h, const QList<Element_Info*>& list)override;
-private:
-	quint8 _num_chan;
-	int _beg_index;
-};
+//class DrawDefectRow:public DrawStrategy
+//{
+//public:
+//	DrawDefectRow(quint8 num_chan,DeviceSettings* device_settings):DrawStrategy(device_settings),
+//	  _num_chan(num_chan),_beg_index(1) {}
+//		
+//	virtual QImage Draw(int w,int h,const QList<Element_Info*>& list)override;
+//	virtual QPixmap DrawPixmap(int w,int h, const QList<Element_Info*>& list)override;
+//private:
+//	void  PlotDefectElement(QPainter& painter,const DefectElement* def_elem, float curr_x,const float next_x,const float pixmap_height,const float plot_step_y);
+//
+//	quint8 _num_chan;
+//	int _beg_index;
+//	QElapsedTimer _timer;
+//
+//};
 class DrawThickRow:public DrawStrategy
 {
 public:

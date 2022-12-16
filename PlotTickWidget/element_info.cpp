@@ -54,6 +54,12 @@ void Element_Info::insertToDataStream( QDataStream& dataStream ) const
 				dataStream<<(*thickElement);
 		 }
 		 break;
+	 case TD_B_SCAN:
+		 {
+			 B_ScanElement* b_scan_element=static_cast<B_ScanElement*>(chan_info_array.at(i));
+			 dataStream<<(*b_scan_element);
+		 }
+		 break;
 	 }
  }
  
@@ -109,6 +115,14 @@ void Element_Info::insertToDataStream( QDataStream& dataStream ) const
 				dataStream>>(*thickElement);
 				chan_info_array.append(thickElement);
 			}
+			break;
+		case TD_B_SCAN:
+			{
+				B_ScanElement* b_scan_element=new B_ScanElement(this);
+				dataStream>>(*b_scan_element);
+				chan_info_array.append(b_scan_element);
+			}
+			break;
 		}
 
 	}
